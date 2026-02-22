@@ -8,7 +8,7 @@ import config from './config/config.service';
 import logger, { morganStream } from './config/logger';
 import { errorHandler } from './middleware/error.middleware';
 import authRoutes from './routes/auth.routes';
-import locationRoutes from './routes/location.routes';
+import locationRoutes, { locationProxy } from './routes/location.routes';
 import messagesRoutes from './routes/messages.routes';
 import healthRoutes from './routes/health.routes';
 
@@ -28,9 +28,6 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
 const defaultLimiter = rateLimit({
   windowMs: config.rateLimit.default.windowMs,
   max: config.rateLimit.default.max,
@@ -47,7 +44,7 @@ const healthLimiter = rateLimit({
 });
 
 app.use('/health', healthLimiter, healthRoutes);
-app.use('/auth', healthLimiter, authRoutes);
+app.use('/auth', healthLimiter, express.json({ limit: '10kb' }), authRoutes);
 app.use('/location', defaultLimiter, locationRoutes);
 app.use('/messages', defaultLimiter, messagesRoutes);
 
@@ -58,8 +55,8 @@ const server = createServer(app);
 // WebSocket upgrade proxying for location service
 server.on('upgrade', (req, socket, head) => {
   if (req.url?.startsWith('/location')) {
-    logger.debug('WebSocket upgrade request for location service');
-    // http-proxy-middleware handles this via ws:true on the locationProxy
+    logger.debug('WebSocket upgrade proxying to location service');
+    locationProxy.upgrade(req, socket as any, head);
   }
 });
 
