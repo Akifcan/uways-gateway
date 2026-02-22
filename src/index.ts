@@ -14,6 +14,8 @@ import healthRoutes from './routes/health.routes';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 const morganFormat = config.isDevelopment ? 'dev' : 'combined';
