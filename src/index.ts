@@ -52,12 +52,11 @@ app.use(errorHandler);
 
 const server = createServer(app);
 
-// WebSocket upgrade proxying for location service
 server.on('upgrade', (req, socket, head) => {
-  if (req.url?.startsWith('/location')) {
-    logger.debug('WebSocket upgrade proxying to location service');
-    locationProxy.upgrade(req, socket as any, head);
-  }
+  if (!req.url?.startsWith('/location')) return;
+  req.url = req.url.replace(/^\/location/, '') || '/';
+  logger.debug('WebSocket upgrade proxying to location service');
+  locationProxy.upgrade(req, socket as any, head);
 });
 
 server.listen(config.port, () => {
